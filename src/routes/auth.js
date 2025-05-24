@@ -6,7 +6,30 @@ import User from '../models/User.js';
 
 const { sign } = jwt;
 const router = Router();
-const upload = multer(); // Xử lý form-data
+const upload = multer();
+
+// Middleware xác thực JWT
+const protect = async (req, res, next) => {
+  let token;
+  try {
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+      token = req.headers.authorization.split(' ')[1];
+      const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      req.user = await User.findById(decoded.id).select('-password');
+      if (!req.user) {
+        res.status(401);
+        throw new Error('Không được ủy quyền, người dùng không tồn tại');
+      }
+      next();
+    } else {
+      res.status(401);
+      throw new Error('Không được ủy quyền, không có token');
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(401).json({ msg: 'Token không hợp lệ' });
+  }
+};
 
 // Đăng ký
 router.post('/register', upload.none(), async (req, res) => {
@@ -53,6 +76,48 @@ router.post('/login', upload.none(), async (req, res) => {
     });
 
     res.json({ token, user: { id: user._id, name: user.name, email } });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: 'Lỗi server' });
+  }
+});
+
+// Lấy thông tin user hiện tại
+router.get('/me', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ msg: 'Không tìm thấy người dùng' });
+    }
+    res.status(200).json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ msg: 'Lỗi server' });
+  }
+});
+
+// Lấy thông tin user theo ID
+router.get('/users/:id', protect, async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ msg: 'Không tìm thấy người dùng' });
+    }
+    res.status(200).json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ msg: 'Lỗi server' });
