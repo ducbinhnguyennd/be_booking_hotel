@@ -9,5 +9,5 @@ const userSchema = new Schema(
   },
   { timestamps: true }
 );
-
+                                                                                                                                                                                                                                                                                                                                                                                                  
 export default model('User', userSchema);
