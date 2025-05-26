@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import Booking from '../models/Booking.js';
 import Hotel from '../models/Hotel.js';
-import { protect } from './auth.js'; // hoặc tách middleware riêng
+import protect from './auth.js';
 
 const router = Router();
 

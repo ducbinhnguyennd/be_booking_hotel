@@ -1,27 +1,33 @@
 import { Router } from 'express';
 import multer from 'multer';
 import Hotel from '../models/Hotel.js';
-import { protect } from './auth.js'; // hoặc tách riêng middleware xác thực nếu cần
+import protect from './auth.js';
 
 const router = Router();
 
 // Cấu hình lưu ảnh tạm trong RAM (có thể cấu hình lưu file nếu muốn)
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
-
-// Thêm khách sạn mới
-router.post('/create', protect, upload.none(), async (req, res) => {
+const uploadFields = upload.fields([
+  { name: 'anhKhachSan', maxCount: 10 }, // tên field trong form-data
+]);
+router.post('/create', protect, uploadFields, async (req, res) => {
   try {
-    const { tenKhachSan, diaChi, anhKhachSan, danhSachPhong } = req.body;
+    const { tenKhachSan, diaChi, danhSachPhong } = req.body;
 
-    // Parse chuỗi JSON từ client gửi (nếu là chuỗi)
-    const dsPhong = JSON.parse(danhSachPhong); // mảng phòng
-    const anh = JSON.parse(anhKhachSan);       // mảng URL ảnh khách sạn
+    // Parse danh sách phòng từ JSON string
+    const dsPhong = JSON.parse(danhSachPhong); // [{ tenPhong, giaTien, anhPhong: [] }, ...]
+
+    // Xử lý ảnh khách sạn từ file
+    const anhKhachSan = (req.files['anhKhachSan'] || []).map(file => {
+      // Dữ liệu base64 (hoặc bạn có thể upload lên Cloudinary, S3, lưu file...)
+      return `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+    });
 
     const hotel = await Hotel.create({
       tenKhachSan,
       diaChi,
-      anhKhachSan: anh,
+      anhKhachSan,
       danhSachPhong: dsPhong,
     });
 

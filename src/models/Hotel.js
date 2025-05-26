@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 const RoomSchema = new mongoose.Schema({
   tenPhong: String,
   giaTien: Number,
-  anhPhong: [String], // danh sách ảnh
+  anhPhong: [String],
 });
 
 const HotelSchema = new mongoose.Schema({
