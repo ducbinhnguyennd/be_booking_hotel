@@ -11,6 +11,11 @@ const HotelSchema = new mongoose.Schema({
   diaChi: String,
   anhKhachSan: [String],
   danhSachPhong: [RoomSchema],
+  type: { 
+    type: String, 
+    enum: ['all', 'popular', 'trending'], // Giới hạn giá trị
+    default: 'all' // Mặc định là 'all'
+  },
 });
 
 export default mongoose.model('Hotel', HotelSchema);
