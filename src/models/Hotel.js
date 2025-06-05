@@ -1,20 +1,25 @@
 import mongoose from 'mongoose';
 
 const RoomSchema = new mongoose.Schema({
-  tenPhong: String,
-  giaTien: Number,
+  tenPhong: { type: String, required: true },
+  giaTien: { type: Number, required: true },
+  loaiPhong: { 
+    type: String, 
+    enum: ['Đơn', 'Đôi', 'VIP', 'Suite'], 
+    default: 'Đơn' 
+  }, // Thêm loại phòng
   anhPhong: [String],
 });
 
 const HotelSchema = new mongoose.Schema({
-  tenKhachSan: String,
-  diaChi: String,
-  anhKhachSan: [String],
+  tenKhachSan: { type: String, required: true },
+  diaChi: { type: String, required: true },
+  anhKhachSan: [{ type: String }], // Mảng đường dẫn ảnh
   danhSachPhong: [RoomSchema],
   type: { 
     type: String, 
-    enum: ['all', 'popular', 'trending'], // Giới hạn giá trị
-    default: 'all' // Mặc định là 'all'
+    enum: ['all', 'popular', 'trending'],
+    default: 'all'
   },
 });
 

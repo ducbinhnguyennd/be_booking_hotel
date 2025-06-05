@@ -2,15 +2,44 @@ import { Router } from 'express';
 import multer from 'multer';
 import Hotel from '../models/Hotel.js';
 import protect from './auth.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Lấy __dirname trong ES module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const router = Router();
 
-// Cấu hình lưu ảnh tạm trong RAM
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
-const uploadFields = upload.fields([
-  { name: 'anhKhachSan', maxCount: 10 },
-]);
+// Cấu hình multer để lưu file vào thư mục uploads/
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, '../uploads')); // Lưu vào thư mục uploads
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (['.jpg', '.jpeg', '.png'].includes(ext)) {
+      cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+    } else {
+      cb(new Error('Chỉ hỗ trợ file .jpg hoặc .png'));
+    }
+  },
+});
+
+const upload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (['.jpg', '.jpeg', '.png'].includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Chỉ hỗ trợ file .jpg hoặc .png'), false);
+    }
+  },
+});
+
+const uploadFields = upload.fields([{ name: 'anhKhachSan', maxCount: 10 }]);
 
 // Tạo khách sạn với type
 router.post('/create', protect, uploadFields, async (req, res) => {
@@ -25,9 +54,9 @@ router.post('/create', protect, uploadFields, async (req, res) => {
     // Parse danh sách phòng từ JSON string
     const dsPhong = JSON.parse(danhSachPhong);
 
-    // Xử lý ảnh khách sạn từ file
+    // Lấy đường dẫn file ảnh
     const anhKhachSan = (req.files['anhKhachSan'] || []).map(file => {
-      return `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+      return `/uploads/${file.filename}`; // Lưu đường dẫn tương đối
     });
 
     const hotel = await Hotel.create({
@@ -35,7 +64,7 @@ router.post('/create', protect, uploadFields, async (req, res) => {
       diaChi,
       anhKhachSan,
       danhSachPhong: dsPhong,
-      type: type || 'all', // Mặc định là 'all' nếu không truyền type
+      type: type || 'all',
     });
 
     res.status(201).json({ msg: 'Tạo khách sạn thành công', hotel });
@@ -48,14 +77,12 @@ router.post('/create', protect, uploadFields, async (req, res) => {
 // Lấy danh sách khách sạn với bộ lọc theo type
 router.get('/', async (req, res) => {
   try {
-    const { filter } = req.query; // Lấy query parameter filter
+    const { filter } = req.query;
     let hotels;
 
     if (filter && ['all', 'popular', 'trending'].includes(filter)) {
-      // Lọc khách sạn theo type
       hotels = await Hotel.find({ type: filter });
     } else {
-      // Mặc định: Lấy tất cả khách sạn
       hotels = await Hotel.find();
     }
 
