@@ -5,7 +5,7 @@ import protect from './auth.js';
 
 const router = Router();
 
-router.post('/book', protect, async (req, res) => {
+router.post('/book',protect,  async (req, res) => {
   const { khachSanId, tenPhong, ngayNhan, ngayTra } = req.body;
   console.log('req.body:', req.body);
   console.log('req.user:', req.user);
@@ -19,6 +19,7 @@ router.post('/book', protect, async (req, res) => {
     const soNgay = Math.ceil(
       (new Date(ngayTra) - new Date(ngayNhan)) / (1000 * 60 * 60 * 24)
     );
+    console.log('phong:', phong.giaTien);
     const tongTien = phong.giaTien * soNgay;
 
     const booking = await Booking.create({
@@ -41,31 +42,44 @@ router.post('/book', protect, async (req, res) => {
 
 router.get('/bookings', protect, async (req, res) => {
   try {
-    const { trangThai } = req.query;
-    console.log('Query trangThai:', trangThai);
-    console.log('User ID:', req.user._id);
-
-    const query = { user: req.user._id };
+    const { trangThai } = req.query
+    const query = { user: req.user._id }
     if (trangThai) {
-      query.trangThai = trangThai;
+      query.trangThai = trangThai
     }
 
     const bookings = await Booking.find(query)
       .populate({
         path: 'khachSan',
-        select: 'tenKhachSan anhKhachSan', // Populate tên và ảnh khách sạn
+        select: 'tenKhachSan anhKhachSan'
       })
-      .sort({ ngayNhan: -1 });
+      .sort({ ngayNhan: -1 })
 
-    console.log('Bookings found:', JSON.stringify(bookings, null, 2));
-    res.json(bookings);
+    // Lấy ảnh đầu tiên của khách sạn
+    const processed = bookings.map(b => {
+      const khachSan = b.khachSan
+        ? {
+            _id: b.khachSan._id,
+            tenKhachSan: b.khachSan.tenKhachSan,
+            anhKhachSan: [b.khachSan.anhKhachSan?.[0]] || null
+          }
+        : null
+
+      return {
+        ...b.toObject(),
+        khachSan
+      }
+    })
+
+    res.json(processed)
   } catch (err) {
-    console.error('Error:', err);
-    res.status(500).json({ msg: 'Lỗi khi lấy danh sách' });
+    console.error('Error:', err)
+    res.status(500).json({ msg: 'Lỗi khi lấy danh sách' })
   }
-});
+})
 
-router.put('/bookings/:id/cancel', protect, async (req, res) => {
+
+router.put('/bookings/:id/cancel',protect,  async (req, res) => {
   try {
     const booking = await Booking.findOneAndUpdate(
       { _id: req.params.id, user: req.user._id },
