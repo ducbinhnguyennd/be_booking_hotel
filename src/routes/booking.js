@@ -97,4 +97,18 @@ router.put('/bookings/:id/cancel',protect,  async (req, res) => {
   }
 });
 
+router.delete('/bookings/clear', async (req, res) => {
+  try {
+    const result = await Booking.deleteMany({})
+    res.json({
+      msg: 'Đã xóa toàn bộ booking',
+      deletedCount: result.deletedCount
+    })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ msg: 'Lỗi khi xóa booking' })
+  }
+})
+
+
 export default router;
